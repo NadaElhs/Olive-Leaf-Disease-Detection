@@ -1,4 +1,3 @@
-# Olive-Leaf-Disease-Detection
+Il faut d'abord vérifier que YOLO est déja installer , sinon in staller le avec la commande "pip install ultralytics".
 
-This project aims to **automatically detect diseases in olive tree leaves** using **Convolutional Neural Networks (CNN)** and Deep Learning techniques.  
-The system predicts the **type of disease** and provides a **confidence score** for each prediction.
+Pour tester avec d'autre video , seulement mettre ici "cap = cv2.VideoCapture("video.mp4")" le chemin vers la védio
