@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+*.dll
+*.pyd
+*.pt
+*.pth

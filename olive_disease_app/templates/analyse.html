@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analyse — Olive Guard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🫒</div>
+      <div>
+        <div class="logo-text">LeafScan Olive</div>
+        <div class="logo-sub">Olive-Leaf-Disease-Detection</div>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-section">
+        <div class="nav-label">Principal</div>
+        <a href="/dashboard" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+        <a href="/analyse" class="nav-item active"><span class="nav-icon">🔬</span> Analyse</a>
+        <a href="/historique" class="nav-item">
+          <span class="nav-icon">📋</span> Historique
+          <span class="nav-badge" id="alert-count" style="display:none">0</span>
+        </a>
+      </div>
+      <div class="nav-section" style="margin-top:12px">
+        <div class="nav-label">Système</div>
+        <a href="#" class="nav-item"><span class="nav-icon">⚙️</span> Paramètres</a>
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="api-pill">
+        <div class="api-dot" id="api-dot"></div>
+        <div class="api-info">
+          <div class="api-status-text" id="api-status-text">API active</div>
+          <div class="api-url">:8000</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Analyse d'image</div>
+        <div class="page-sub">Détectez les maladies de vos oliviers par IA</div>
+      </div>
+      <a href="/dashboard" class="btn btn-ghost">← Dashboard</a>
+    </div>
+
+    <div class="upload-row">
+
+      <!-- Upload card -->
+      <div class="card">
+        <div class="card-title">📤 Charger une image</div>
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="file-input" accept="image/*"/>
+          <div class="dz-icon">🫒</div>
+          <div class="dz-title">Glissez une image ici</div>
+          <div class="dz-sub">ou cliquez pour sélectionner</div>
+          <div class="dz-formats">
+            <span class="dz-fmt">PNG</span><span class="dz-fmt">JPG</span>
+            <span class="dz-fmt">JPEG</span><span class="dz-fmt">WebP</span><span class="dz-fmt">BMP</span>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-area" id="preview-area" style="margin-top:16px">
+          <div class="preview-img-wrap">
+            <img id="preview-img" src="" alt="preview"/>
+            <div class="preview-overlay">
+              <div class="preview-filename" id="preview-filename"></div>
+            </div>
+          </div>
+          <div class="preview-actions">
+            <button class="btn btn-primary" id="analyse-btn" onclick="runAnalysis()">🔬 Lancer l'analyse</button>
+            <button class="btn btn-ghost" onclick="resetAll()">✕ Effacer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results card -->
+      <div class="card">
+        <div class="card-title"> Résultats</div>
+
+        <!-- Loader -->
+        <div class="loader" id="loader">
+          <div class="spinner"></div>
+          <div class="loader-text">Analyse en cours…</div>
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;gap:10px">
+          <div style="font-size:40px;opacity:.3">🔬</div>
+          <div style="font-size:13px;color:var(--text-faint);text-align:center">Chargez une image<br>et lancez l'analyse</div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-area" id="results-area">
+          <div class="result-header" id="result-header">
+            <div class="result-emoji" id="result-emoji"></div>
+            <div>
+              <div class="result-title" id="result-title"></div>
+              <div class="result-sub" id="result-sub"></div>
+            </div>
+          </div>
+
+          <div class="stats-strip" id="stats-strip"></div>
+
+          <div class="detection-list" id="detection-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Annotated image full width -->
+    <div id="annotated-section" style="display:none">
+      <div class="card">
+        <div class="card-title">🖼️ Image annotée</div>
+        <div class="annotated-wrap">
+          <img id="annotated-img" src="" alt="annotated"/>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+let selectedFile = null;
+
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('file-input');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  const f = e.dataTransfer.files[0]; if(f) setFile(f);
+});
+fi.addEventListener('change', () => { if(fi.files[0]) setFile(fi.files[0]); });
+
+function setFile(f) {
+  selectedFile = f;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('preview-filename').textContent = f.name + ' · ' + (f.size/1024).toFixed(1)+'KB';
+  };
+  reader.readAsDataURL(f);
+  document.getElementById('preview-area').classList.add('show');
+  document.getElementById('dropzone').style.display = 'none';
+  resetResults();
+}
+
+function resetResults() {
+  document.getElementById('results-area').classList.remove('show');
+  document.getElementById('empty-state').style.display = 'flex';
+  document.getElementById('annotated-section').style.display = 'none';
+  document.getElementById('loader').classList.remove('show');
+}
+
+function resetAll() {
+  selectedFile = null;
+  document.getElementById('preview-area').classList.remove('show');
+  document.getElementById('dropzone').style.display = '';
+  document.getElementById('file-input').value = '';
+  resetResults();
+}
+
+async function runAnalysis() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('analyse-btn');
+  btn.disabled = true;
+  document.getElementById('loader').classList.add('show');
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results-area').classList.remove('show');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    const resp = await fetch('/predict', { method:'POST', body:formData });
+    const data = await resp.json();
+    document.getElementById('loader').classList.remove('show');
+    if (data.success) {
+      displayResults(data);
+      saveToHistory(data, selectedFile.name);
+    } else {
+      showError(data.message || 'Erreur inconnue');
+    }
+  } catch(err) {
+    document.getElementById('loader').classList.remove('show');
+    showError('Impossible de contacter l\'API. Vérifiez qu\'elle est active.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showError(msg) {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results-area').classList.add('show');
+  const rh = document.getElementById('result-header');
+  rh.className = 'result-header sick';
+  document.getElementById('result-emoji').textContent = '❌';
+  document.getElementById('result-title').textContent = 'Erreur';
+  document.getElementById('result-sub').textContent = msg;
+  document.getElementById('stats-strip').innerHTML = '';
+  document.getElementById('detection-list').innerHTML = '';
+}
+
+function displayResults(data) {
+  const dets = data.detections || [];
+const hasSick = dets.some(d => d.class_name !== 'healthy');
+  const rh = document.getElementById('result-header');
+  rh.className = 'result-header ' + (hasSick ? 'sick' : 'healthy');
+  document.getElementById('result-emoji').textContent = hasSick ? '⚠️' : '✅';
+  document.getElementById('result-title').textContent = hasSick ? 'Maladie détectée' : 'Olivier sain';
+  document.getElementById('result-sub').textContent = data.message || '';
+
+  const avgConf = dets.length ? Math.round(dets.reduce((s,d)=>s+d.confidence,0)/dets.length*100) : 0;
+  document.getElementById('stats-strip').innerHTML = `
+    <div class="stat-cell"><div class="stat-val">${dets.length}</div><div class="stat-lbl">Détections</div></div>
+    <div class="stat-cell"><div class="stat-val">${avgConf}%</div><div class="stat-lbl">Confiance moy.</div></div>
+    <div class="stat-cell"><div class="stat-val">${hasSick?'⚠️':'✅'}</div><div class="stat-lbl">Statut</div></div>
+  `;
+
+  document.getElementById('detection-list').innerHTML = dets.length ? dets.map(d => {
+    const sick = d.class_name !== 'healthy';
+    const pct = Math.round(d.confidence*100);
+    return `
+      <div class="det-item">
+        <div class="det-class">${d.class_name}</div>
+        <div class="det-conf-bar"><div class="det-conf-fill ${sick?'sick':''}" style="width:${pct}%"></div></div>
+        <div class="det-pct">${pct}%</div>
+      </div>`;
+  }).join('') : `<div style="color:var(--text-dim);font-size:13px;text-align:center;padding:12px">Aucune détection</div>`;
+
+  document.getElementById('results-area').classList.add('show');
+  document.getElementById('empty-state').style.display = 'none';
+
+  if (data.image_annotated) {
+    document.getElementById('annotated-img').src = 'data:image/jpeg;base64,' + data.image_annotated;
+    document.getElementById('annotated-section').style.display = 'block';
+  }
+
+  updateAlertBadge();
+}
+
+function saveToHistory(data, filename) {
+  try {
+    const hist = JSON.parse(localStorage.getItem('olive_history') || '[]');
+    hist.push({ ...data, filename, timestamp: new Date().toISOString() });
+    localStorage.setItem('olive_history', JSON.stringify(hist.slice(-200)));
+  } catch {}
+}
+
+function updateAlertBadge() {
+  try {
+    const hist = JSON.parse(localStorage.getItem('olive_history') || '[]');
+    const sickCount = hist.filter(h => 
+  (h.detections || []).some(d => d.class_name !== 'healthy')
+).length;
+    const el = document.getElementById('alert-count');
+    if(sickCount>0){el.textContent=sickCount;el.style.display='';}
+    else el.style.display='none';
+  } catch {}
+}
+
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    document.getElementById('api-dot').className = d.api_ready ? 'api-dot' : 'api-dot offline';
+    document.getElementById('api-status-text').textContent = d.api_ready ? 'API active' : 'API hors ligne';
+  } catch {}
+}
+
+checkStatus();
+setInterval(checkStatus, 15000);
+updateAlertBadge();
+</script>
+</body>
+</html>
