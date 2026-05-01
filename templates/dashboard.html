@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — Olive Guard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🫒</div>
+      <div>
+        <div class="logo-text">LeafScan Olive</div>
+        <div class="logo-sub">Olive-Leaf-Disease-Detection</div>
+      </div>
+    </div>
+
+    <nav>
+      <div class="nav-section">
+        <div class="nav-label">Principal</div>
+        <a href="/dashboard" class="nav-item active">
+          <span class="nav-icon">⬛</span> Dashboard
+        </a>
+        <a href="/analyse" class="nav-item">
+          <span class="nav-icon">🔬</span> Analyse
+        </a>
+        <a href="/historique" class="nav-item">
+          <span class="nav-icon">📋</span> Historique
+          <span class="nav-badge" id="alert-count">3</span>
+        </a>
+      </div>
+      <div class="nav-section" style="margin-top:12px;">
+        <div class="nav-label">Système</div>
+        <a href="#" class="nav-item">
+          <span class="nav-icon">⚙️</span> Paramètres
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="api-pill">
+        <div class="api-dot" id="api-dot"></div>
+        <div class="api-info">
+          <div class="api-status-text" id="api-status-text">API active</div>
+          <div class="api-url">:8000</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Vue d'ensemble — Détection des maladies des oliviers</div>
+      </div>
+      <div class="topbar-right">
+        <a href="/historique" class="btn btn-ghost">📋 Historique</a>
+        <a href="/analyse" class="btn btn-primary">🔬 Nouvelle analyse</a>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi fade-up">
+        <div class="kpi-icon"></div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-label">Analyses totales</div>
+        <div class="kpi-delta up" id="kpi-delta">+12%</div>
+      </div>
+      <div class="kpi fade-up">
+        <div class="kpi-icon"></div>
+        <div class="kpi-value" style="color:var(--leaf)" id="kpi-healthy">—</div>
+        <div class="kpi-label">Oliviers sains</div>
+      </div>
+      <div class="kpi alert fade-up">
+        <div class="kpi-icon"></div>
+        <div class="kpi-value" style="color:var(--sick)" id="kpi-sick">—</div>
+        <div class="kpi-label">Malades détectés</div>
+      </div>
+      <div class="kpi fade-up">
+        <div class="kpi-icon"></div>
+        <div class="kpi-value" id="kpi-accuracy">—</div>
+        <div class="kpi-label">Confiance moyenne</div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="grid-2">
+
+      <!-- Bar chart -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Analyses par jour (7 derniers jours)</div>
+          <a href="/historique" class="card-action">Voir tout →</a>
+        </div>
+        <div class="bar-chart" id="bar-chart"></div>
+      </div>
+
+      <!-- Donut -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Répartition des résultats</div>
+        </div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" width="110" height="110" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="40" fill="none" stroke="var(--surface2)" stroke-width="14"/>
+            <circle id="donut-sick" cx="55" cy="55" r="40" fill="none" stroke="var(--sick)" stroke-width="14"
+              stroke-dasharray="251.2" stroke-dashoffset="251.2"
+              stroke-linecap="round" transform="rotate(-90 55 55)"
+              style="transition:stroke-dashoffset 1s ease"/>
+            <circle id="donut-healthy" cx="55" cy="55" r="40" fill="none" stroke="var(--olive)" stroke-width="14"
+              stroke-dasharray="251.2" stroke-dashoffset="251.2"
+              stroke-linecap="round" transform="rotate(-90 55 55)"
+              style="transition:stroke-dashoffset 1s .3s ease"/>
+            <text x="55" y="50" text-anchor="middle" fill="var(--text)" font-family="Syne,sans-serif" font-size="16" font-weight="800" id="donut-pct">—</text>
+            <text x="55" y="64" text-anchor="middle" fill="var(--text-dim)" font-family="DM Sans,sans-serif" font-size="9">sains</text>
+          </svg>
+          <div class="donut-legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--olive)"></div>
+              <div class="legend-name">Sains</div>
+              <div class="legend-pct" id="leg-healthy">—</div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--sick)"></div>
+              <div class="legend-name">Malades</div>
+              <div class="legend-pct" id="leg-sick">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom row -->
+    <div class="grid-2">
+
+      <!-- Activity feed -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Dernières analyses</div>
+          <a href="/historique" class="card-action">Voir tout →</a>
+        </div>
+        <div class="activity" id="activity-feed">
+          <div style="color:var(--text-dim);font-size:13px;text-align:center;padding:20px">Aucune analyse pour l'instant</div>
+        </div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Carte de distribution</div>
+        </div>
+        <div class="map-placeholder">
+          <div class="map-dots" id="map-dots"></div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:14px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim)">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--olive)"></div> Sain
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim)">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--sick)"></div> Malade
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim)">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--surface2);border:1px solid var(--border)"></div> Non analysé
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('olive_history') || '[]'); } catch { return []; }
+}
+
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    const dot = document.getElementById('api-dot');
+    const txt = document.getElementById('api-status-text');
+    if (d.api_ready) { dot.className='api-dot'; txt.textContent='API active'; }
+    else { dot.className='api-dot offline'; txt.textContent='API hors ligne'; }
+  } catch { }
+}
+
+function computeStats(history) {
+  const total = history.length;
+  let healthy = 0, sick = 0, confSum = 0, confCount = 0;
+  history.forEach(item => {
+    const dets = item.detections || [];
+    if (dets.length === 0) { healthy++; return; }
+    let hasSick = false;
+    dets.forEach(d => {
+      if (d.class_name !== 'healthy') hasSick = true;
+      confSum += d.confidence || 0; confCount++;
+    });
+    hasSick ? sick++ : healthy++;
+  });
+  const avgConf = confCount ? Math.round(confSum/confCount*100) : 0;
+  return { total, healthy, sick, avgConf };
+}
+
+function fillKPIs(stats) {
+  document.getElementById('kpi-total').textContent = stats.total;
+  document.getElementById('kpi-healthy').textContent = stats.healthy;
+  document.getElementById('kpi-sick').textContent = stats.sick;
+  document.getElementById('kpi-accuracy').textContent = stats.avgConf ? stats.avgConf+'%' : '—';
+}
+
+function fillDonut(stats) {
+  const circ = 251.2;
+  const sickPct = stats.total ? stats.sick/stats.total : 0;
+  const healthyPct = stats.total ? stats.healthy/stats.total : 0;
+  const sickDash = sickPct * circ;
+  document.getElementById('donut-sick').style.strokeDashoffset = circ - sickDash;
+  const healthyDash = healthyPct * circ;
+  const sickAngle = sickPct * 360;
+  document.getElementById('donut-healthy').setAttribute('transform', `rotate(${-90 + sickAngle} 55 55)`);
+  document.getElementById('donut-healthy').style.strokeDashoffset = circ - healthyDash;
+  const pct = stats.total ? Math.round(stats.healthy/stats.total*100) : 0;
+  document.getElementById('donut-pct').textContent = stats.total ? pct+'%' : '—';
+  document.getElementById('leg-healthy').textContent = stats.total ? Math.round(stats.healthy/stats.total*100)+'%' : '—';
+  document.getElementById('leg-sick').textContent = stats.total ? Math.round(stats.sick/stats.total*100)+'%' : '—';
+}
+
+function fillBarChart(history) {
+  const days = [];
+  for (let i=6;i>=0;i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    days.push({ label: d.toLocaleDateString('fr',{weekday:'short'}).slice(0,3), date: d.toDateString(), count:0, sick:0 });
+  }
+  history.forEach(item => {
+    const d = new Date(item.timestamp);
+    const idx = days.findIndex(x=>x.date===d.toDateString());
+    if (idx>=0) {
+      days[idx].count++;
+      const dets = item.detections||[];
+      if (dets.some(d => d.class_name !== 'healthy')) days[idx].sick++;
+    }
+  });
+  const max = Math.max(...days.map(d=>d.count), 1);
+  const container = document.getElementById('bar-chart');
+  container.innerHTML = '';
+  days.forEach(day => {
+    const pct = Math.round(day.count/max*100);
+    container.innerHTML += `
+      <div class="bar-col">
+        <div class="bar-track">
+          <div class="bar-fill${day.sick>0?' sick':''}" style="height:${pct}%"></div>
+        </div>
+        <div class="bar-label">${day.label}</div>
+      </div>`;
+  });
+}
+
+function fillActivity(history) {
+  const feed = document.getElementById('activity-feed');
+  const recent = [...history].reverse().slice(0,5);
+  if (!recent.length) return;
+  feed.innerHTML = recent.map(item => {
+    const dets = item.detections||[];
+   const hasSick = dets.some(d => d.class_name !== 'healthy');
+    const name = item.filename || 'image.jpg';
+    const time = item.timestamp ? new Date(item.timestamp).toLocaleString('fr',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '';
+    return `
+      <div class="activity-item">
+        <div class="act-icon ${hasSick?'sick':'healthy'}">${hasSick?'⚠️':'✅'}</div>
+        <div class="act-body">
+          <div class="act-title">${name}</div>
+          <div class="act-meta">${dets.length} détection(s) · ${time}</div>
+        </div>
+        <div class="act-badge ${hasSick?'badge-sick':'badge-healthy'}">${hasSick?'Malade':'Sain'}</div>
+      </div>`;
+  }).join('');
+}
+
+function fillMap(stats) {
+  const container = document.getElementById('map-dots');
+  const dots = [];
+  for(let i=0;i<stats.sick;i++) dots.push('s');
+  for(let i=0;i<stats.healthy;i++) dots.push('h');
+  while(dots.length<30) dots.push('');
+  dots.sort(()=>Math.random()-.5);
+  container.innerHTML = dots.map(t=>`<div class="map-dot ${t}"></div>`).join('');
+}
+
+function updateAlertCount(stats) {
+  const el = document.getElementById('alert-count');
+  if(stats.sick>0) { el.textContent=stats.sick; el.style.display=''; }
+  else el.style.display='none';
+}
+
+(function init() {
+  const history = getHistory();
+  const stats = computeStats(history);
+  fillKPIs(stats);
+  setTimeout(()=>fillDonut(stats), 100);
+  fillBarChart(history);
+  fillActivity(history);
+  fillMap(stats);
+  updateAlertCount(stats);
+  checkStatus();
+  setInterval(checkStatus, 15000);
+})();
+</script>
+</body>
+</html>
